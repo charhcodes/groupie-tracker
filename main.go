@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -79,35 +80,39 @@ func errorHandler(w http.ResponseWriter, r *http.Request, status int) {
 }
 
 func ArtistData() []Artist {
-	artist, err := http.Get("https://groupietrackers.herokuapp.com/api/artists")
+	// The code will read the data from a JSON response from GroupieTracker's API
+
+	artist, err := http.Get("https://groupietrackers.herokuapp.com/api/artists") //grabs list of artists from link
 	if err != nil {
 		log.Fatal()
 	}
-	artistData, err := ioutil.ReadAll(artist.Body)
+	artistData, err := io.ReadAll(artist.Body) //reads data using ReadAll, stores in artistData
 	if err != nil {
 		log.Fatal()
 	}
-	json.Unmarshal(artistData, &artistInfo)
+	json.Unmarshal(artistData, &artistInfo) //unmarshalls the data from artistData into the artistinfo struct
 	return artistInfo
 }
 
 func LocationData() []Location {
-	var bytes []byte
-	location, err2 := http.Get("https://groupietrackers.herokuapp.com/api/locations")
+	//  The code will take the JSON response from GroupieTracker and parse it into a map of Location data.
+
+	var bytes []byte                                                                  // empty array of bytes
+	location, err2 := http.Get("https://groupietrackers.herokuapp.com/api/locations") // gets locations from link, stores in location
 	if err2 != nil {
 		log.Fatal()
 	}
-	locationData, err3 := ioutil.ReadAll(location.Body)
+	locationData, err3 := io.ReadAll(location.Body) // reads location data from JSON file, stores in locationData
 	if err3 != nil {
 		log.Fatal()
 	}
-	err := json.Unmarshal(locationData, &locationMap)
+	err := json.Unmarshal(locationData, &locationMap) // unmarshalls locationData, stores in locationMap struct
 	if err != nil {
 		fmt.Println("error :", err)
 	}
-	for _, m := range locationMap {
-		for _, v := range m {
-			bytes = append(bytes, v)
+	for _, m := range locationMap { // for every value in locationMap, m is created
+		for _, v := range m { // for every value in m, v is created
+			bytes = append(bytes, v) // each value is appended into the array of bytes from before
 		}
 	}
 	err = json.Unmarshal(bytes, &locationInfo)
@@ -172,15 +177,18 @@ func RelationData() []Relation {
 }
 
 func collectData() []Data {
+	// The code is used to collect data about the artist, relation, location and date
+
+	// calls functions from before
 	ArtistData()
 	RelationData()
 	LocationData()
 	DatesData()
 
-	dataData := make([]Data, len(artistInfo))
-	for i := 0; i < len(artistInfo); i++ {
-		dataData[i].A = artistInfo[i]
-		dataData[i].R = relationInfo[i]
+	dataData := make([]Data, len(artistInfo)) // an empty array of Data objects that will be used to temporarily store names, locations etc.
+	for i := 0; i < len(artistInfo); i++ {    // iterates through artistInfo values
+		dataData[i].A = artistInfo[i]   // uses i to assign values from artistInfo to the A field in dataData
+		dataData[i].R = relationInfo[i] // same is done for R and relationInfo, L for locationInfo etc.
 		dataData[i].L = locationInfo[i]
 		dataData[i].D = datesInfo[i]
 	}
@@ -193,29 +201,30 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := ArtistData()
-	t, err := template.ParseFiles("index.html")
+	t, err := template.ParseFiles("index.html") // parse thru data
 	if err != nil {
 		errorHandler(w, r, http.StatusInternalServerError)
 		return
 	}
-	t.Execute(w, data)
+	t.Execute(w, data) // executes template
 }
 
 func artistPage(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/artistInfo" {
+	if r.URL.Path != "/artistInfo" { // checks if URL ends with 'artistInfo'
 		errorHandler(w, r, http.StatusNotFound)
 		return
 	}
-	value := r.FormValue("ArtistName")
-	if value == "" {
+	value := r.FormValue("ArtistName") // value variable stores the artist name as a form value
+	if value == "" {                   // checks if value is empty
 		errorHandler(w, r, http.StatusBadRequest)
 		return
 	}
-	a := collectData()
-	var b Data
-	for i, ele := range collectData() {
-		if value == ele.A.Name {
-			b = a[i]
+	a := collectData()                  // calls collectData, stores as a new variable
+	var b Data                          // creates new variable named b
+	for i, ele := range collectData() { // ranges over collectData using i and v
+		if value == ele.A.Name { // checks if value is equal to v (in collectData)
+			// of the A field (Data struct), of Name (Artist struct)
+			b = a[i] // assigns b variable to the collectData element at i
 		}
 	}
 	t, err := template.ParseFiles("artistPage.html")
@@ -223,7 +232,7 @@ func artistPage(w http.ResponseWriter, r *http.Request) {
 		errorHandler(w, r, http.StatusInternalServerError)
 		return
 	}
-	t.Execute(w, b)
+	t.Execute(w, b) // executes template using data from b
 }
 
 // collection of webpage handlers
