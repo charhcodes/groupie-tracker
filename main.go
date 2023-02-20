@@ -66,33 +66,64 @@ var (
 // handles error messages
 func errorHandler(w http.ResponseWriter, r *http.Request, status int) {
 	w.WriteHeader(status) // sends an HTTP response with the status code, does not write
-	if status == http.StatusNotFound {
-		_, err := template.ParseFiles("error.html")
+	t, err := template.ParseFiles("error.html")
+	switch status {
+	case http.StatusNotFound:
 		if err != nil {
 			errorHandler(w, r, http.StatusInternalServerError)
 			return
 		}
 		fmt.Println("HTTP status 404: Page Not Found")
+		t.Execute(w, nil)
 		os.Exit(0)
-	}
-	if status == http.StatusInternalServerError {
-		_, err := template.ParseFiles("error.html")
+	case http.StatusInternalServerError:
 		if err != nil {
 			fmt.Fprint(w, "HTTP status 500: Internal Server Error")
 			return
 		}
 		fmt.Println("HTTP status 500: Internal Server Error")
+		t.Execute(w, nil)
 		os.Exit(0)
-	}
-	if status == http.StatusBadRequest {
-		_, err := template.ParseFiles("error.html")
+	case http.StatusBadRequest:
 		if err != nil {
 			fmt.Fprint(w, "HTTP status 500: Internal Server Error")
 			return
 		}
 		fmt.Println("HTTP status 400: Bad Request")
+		t.Execute(w, nil)
 		os.Exit(0)
 	}
+
+	// fmt.Println("working")
+	// w.WriteHeader(status)
+	// if status == http.StatusNotFound {
+	// 	t, err := template.ParseFiles("error.html")
+	// 	if err != nil {
+	// 		errorHandler(w, r, http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// 	em := "HTTP status 404: Page Not Found"
+	// 	p := Text{ErrorNum: status, ErrorMes: em}
+	// 	t.Execute(w, p)
+	// }
+	// if status == http.StatusInternalServerError {
+	// 	t, err := template.ParseFiles("error.html")
+	// 	if err != nil {
+	// 		fmt.Fprint(w, "HTTP status 500: Internal Server Error -missing errorPage.html file")
+	// 	}
+	// 	em := "HTTP status 500: Internal Server Error"
+	// 	p := Text{ErrorNum: status, ErrorMes: em}
+	// 	t.Execute(w, p)
+	// }
+	// if status == http.StatusBadRequest {
+	// 	t, err := template.ParseFiles("error.html")
+	// 	if err != nil {
+	// 		fmt.Fprint(w, "HTTP status 500: Internal Server Error -missing errorPage.html file")
+	// 	}
+	// 	em := "HTTP status 400: Bad Request! Please select artist from the Home Page"
+	// 	p := Text{ErrorNum: status, ErrorMes: em}
+	// 	t.Execute(w, p)
+	// }
 }
 
 // gets and stores data from Artist API
@@ -218,53 +249,51 @@ func collectData() []Data {
 
 // home page handler
 func homePage(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		if r.URL.Path == "/artistInfo" {
-			fmt.Println("Working 1")
+	if r.URL.Path != "/" && r.URL.Path == "/artistInfo" {
+		errorHandler(w, r, http.StatusNotFound)
+		fmt.Println("Home page, error 1")
+		os.Exit(0)
+	} else {
+		data := ArtistData()
+		t, err := template.ParseFiles("index.html") // uses template.html to parse thru data
+		if err != nil {
+			fmt.Println("Home page, error 2")
+			errorHandler(w, r, http.StatusInternalServerError)
 			return
 		}
-		fmt.Println("Home page, error 1")
-		errorHandler(w, r, http.StatusNotFound)
-		return
+		t.Execute(w, data) // executes template.html
 	}
-	data := ArtistData()
-	t, err := template.ParseFiles("index.html") // uses template.html to parse thru data
-	if err != nil {
-		fmt.Println("Home page, error 2")
-		errorHandler(w, r, http.StatusInternalServerError)
-		return
-	}
-	t.Execute(w, data) // executes template.html
 }
 
 // handles the artist Page when artist image is clicked by receiving "ArtistName" value
 func artistPage(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/artistInfo" { // checks if URL ends with 'artistInfo'
-		fmt.Println("Error 1")
+	if r.URL.Path != "/artistInfo" && r.URL.Path != "/" { // checks if URL ends with 'artistInfo'
 		errorHandler(w, r, http.StatusNotFound)
-		return
-	}
-	value := r.FormValue("ArtistName") // value variable stores the artist name as a form value
-	if value == "" {                   // checks if value is empty
-		fmt.Println("Error 2")
-		errorHandler(w, r, http.StatusBadRequest)
-		return
-	}
-	a := collectData()                // calls collectData, stores as a new variable
-	var b Data                        // creates new variable named b
-	for i, v := range collectData() { // ranges over collectData using i and v
-		if value == v.A.Name { // checks if value is equal to v (in collectData), of the A field (Data struct), of Name (Artist struct)
-			// aka it checks if value is equal to an artist in our database
-			b = a[i] // assigns b variable to the collectData element at i
+		fmt.Println("Error 1")
+		os.Exit(0)
+	} else {
+		value := r.FormValue("ArtistName") // value variable stores the artist name as a form value
+		if value == "" {                   // checks if value is empty
+			fmt.Println("Error 2")
+			errorHandler(w, r, http.StatusBadRequest)
+			return
 		}
+		a := collectData()                // calls collectData, stores as a new variable
+		var b Data                        // creates new variable named b
+		for i, v := range collectData() { // ranges over collectData using i and v
+			if value == v.A.Name { // checks if value is equal to v (in collectData), of the A field (Data struct), of Name (Artist struct)
+				// aka it checks if value is equal to an artist in our database
+				b = a[i] // assigns b variable to the collectData element at i
+			}
+		}
+		t, err := template.ParseFiles("artistPage.html")
+		if err != nil {
+			fmt.Println("Error 3")
+			errorHandler(w, r, http.StatusInternalServerError)
+			return
+		}
+		t.Execute(w, b) // executes template using data from b
 	}
-	t, err := template.ParseFiles("artistPage.html")
-	if err != nil {
-		fmt.Println("Error 3")
-		errorHandler(w, r, http.StatusInternalServerError)
-		return
-	}
-	t.Execute(w, b) // executes template using data from b
 }
 
 // displays location data as a JSON raw message on webpage.
@@ -273,30 +302,31 @@ func artistPage(w http.ResponseWriter, r *http.Request) {
 // 	json.NewEncoder(w).Encode(LocationData()) // creates a new encoder that writes to w, then encodes LocationData by converting it to JSON
 // }
 
-// displays dates data as a JSON raw message on webpage.
+// // displays dates data as a JSON raw message on webpage.
 // func returnAllDates(w http.ResponseWriter, r *http.Request) {
 // 	//fmt.Println("Endpoint Hit: returnAllDates")
 // 	json.NewEncoder(w).Encode(DatesData())
 // }
 
-// displays relation data as a JSON raw message on webpage.
+// // displays relation data as a JSON raw message on webpage.
 // func returnAllRelation(w http.ResponseWriter, r *http.Request) {
 // 	//fmt.Println("Endpoint Hit: returnAllRelation")
 // 	json.NewEncoder(w).Encode(RelationData())
 // }
 
 // collection of webpage handlers
-func Handler() {
+// func Handler() {
+
+// }
+
+func main() {
 	fmt.Println("Fetching server at port 8080...")
 	http.HandleFunc("/", homePage)
-	http.HandleFunc("/artistInfo", artistPage)
 	// http.HandleFunc("/locations", returnAllLocations)
 	// http.HandleFunc("/dates", returnAllDates)
 	// http.HandleFunc("/relations", returnAllRelation)
+	http.HandleFunc("/artistInfo", artistPage)
+
 	//http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("css"))))
 	http.ListenAndServe(":8080", nil)
-}
-
-func main() {
-	Handler()
 }
