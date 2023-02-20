@@ -314,11 +314,6 @@ func artistPage(w http.ResponseWriter, r *http.Request) {
 // 	json.NewEncoder(w).Encode(RelationData())
 // }
 
-// collection of webpage handlers
-// func Handler() {
-
-// }
-
 func main() {
 	fmt.Println("Fetching server at port 8080...")
 	http.HandleFunc("/", homePage)
