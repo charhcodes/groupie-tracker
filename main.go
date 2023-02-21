@@ -39,8 +39,9 @@ type Relation struct {
 }
 
 var (
-	artistInfo   []Artist
-	locationMap  map[string]json.RawMessage
+	artistInfo  []Artist                   // slice of artist structs
+	locationMap map[string]json.RawMessage // maps a string key to a json.RawMessage value
+	//RawMessage = byte slice that represents a JSON value, doesn't need to be parsed
 	locationInfo []Location
 	datesMap     map[string]json.RawMessage
 	datesInfo    []Date
@@ -48,12 +49,15 @@ var (
 	relationInfo []Relation
 )
 
+// handles 404, 500, 400 errors
 func errorHandler(w http.ResponseWriter, r *http.Request, status int) {
 	w.WriteHeader(status)
 	t, err := template.ParseFiles("error.html")
 	errorMssg := ""
-	if status == http.StatusNotFound {
+	if status == http.StatusNotFound { // if status = 404
 		if err != nil {
+			// if it is not giving an error (when there is one),
+			// return a 500 error instead
 			errorHandler(w, r, http.StatusInternalServerError)
 			return
 		}
@@ -61,7 +65,7 @@ func errorHandler(w http.ResponseWriter, r *http.Request, status int) {
 		fmt.Println(errorMssg)
 		t.Execute(w, errorMssg)
 	}
-	if status == http.StatusInternalServerError {
+	if status == http.StatusInternalServerError { // if status = 500
 		errorMssg = "Error: HTTP status 500"
 		if err != nil {
 			fmt.Fprint(w, errorMssg)
@@ -69,9 +73,10 @@ func errorHandler(w http.ResponseWriter, r *http.Request, status int) {
 		fmt.Println(errorMssg)
 		t.Execute(w, errorMssg)
 	}
-	if status == http.StatusBadRequest {
+	if status == http.StatusBadRequest { // if status = 400
 		errorMssg = "Error: HTTP status 400"
 		if err != nil {
+			errorMssg = "Error: HTTP status 500"
 			fmt.Fprint(w, errorMssg)
 		}
 		fmt.Println(errorMssg)
