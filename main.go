@@ -201,7 +201,7 @@ func collectData() []Data {
 }
 
 func homePage(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	if r.URL.Path != "/" && r.URL.Path != "/artistInfo" {
 		errorHandler(w, r, http.StatusNotFound)
 		return
 	}
@@ -215,7 +215,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func artistPage(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/artistInfo" { // checks if URL ends with 'artistInfo'
+	if r.URL.Path != "/artistInfo" && r.URL.Path != "/" { // checks if URL ends with 'artistInfo'
 		errorHandler(w, r, http.StatusNotFound)
 		return
 	}
